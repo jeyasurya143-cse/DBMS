@@ -1,0 +1,821 @@
+1)Write a trigger to prevent insertion of a product if the product name is NULL.
+
+SQL> CREATE OR REPLACE TRIGGER before_insert_product
+  2  BEFORE INSERT ON product
+  3  FOR EACH ROW
+  4  BEGIN
+  5      IF :NEW.product_name IS NULL THEN
+  6          RAISE_APPLICATION_ERROR(-20001,'Product name cannot be null');
+  7      END IF;
+  8  END;
+  9  /
+
+Trigger created.
+
+
+SQL> insert into product values(600,null,6000,1,2,2);
+insert into product values(600,null,6000,1,2,2)
+            *
+ERROR at line 1:
+ORA-20001: Product name cannot be null
+ORA-06512: at "JEYASURYA.BEFORE_INSERT_PRODUCT", line 3
+ORA-04088: error during execution of trigger 'JEYASURYA.BEFORE_INSERT_PRODUCT'
+
+2)Write a trigger to display a message whenever a new sale record is inserted.
+
+SQL> CREATE OR REPLACE TRIGGER after_insert_sales
+  2  AFTER INSERT ON sales
+  3  FOR EACH ROW
+  4  BEGIN
+  5      DBMS_OUTPUT.PUT_LINE('New sale inserted with ID: ' || :NEW.sale_id);
+  6  END;
+  7  /
+
+Trigger created.
+
+SQL> insert into sales values (300,sysdate,'Pending',2);
+New sale inserted with ID: 300
+
+1 row created.
+
+3)Write a trigger to prevent deletion of a product if it exists in the order_items table.
+
+SQL> SELECT * FROM order_items WHERE product_id =102;
+
+ORDER_ITEM_ID    SALE_ID PRODUCT_ID   QUANTITY DELIVERY_
+------------- ---------- ---------- ---------- ---------
+          308        202        102          3 16-JAN-25
+          302        202        102          5 16-FEB-26
+
+SQL> CREATE OR REPLACE TRIGGER before_delete_product
+  2  BEFORE DELETE ON product
+  3  FOR EACH ROW
+  4  DECLARE
+  5     v_count NUMBER;
+  6  BEGIN
+  7     SELECT COUNT(*) INTO v_count
+  8     FROM order_items
+  9     WHERE product_id = :OLD.product_id;
+ 10     IF v_count > 0 THEN
+ 11        RAISE_APPLICATION_ERROR(-20002,'Product exists in orders. Cannot delete.');
+ 12     END IF;
+ 13  END;
+ 14  /
+
+Trigger created.
+
+SQL> select * from product where product_id=318;
+
+PRODUCT_ID PRODUCT_NAME         PRICE CATEGORY_ID SUPPLIER_ID
+---------- --------------- ---------- ----------- -----------
+PRICE_CATEGORY
+--------------------
+       318 Graphics Tablet      13125           1           3
+
+
+SQL> select * from order_items where product_id=318;
+
+no rows selected
+
+SQL> delete from product where product_id=318;
+
+1 row deleted.
+
+SQL> DELETE FROM product WHERE product_id = 102;
+DELETE FROM product WHERE product_id = 102
+            *
+ERROR at line 1:
+ORA-20002: Product exists in orders. Cannot delete.
+ORA-06512: at "JEYASURYA.BEFORE_DELETE_PRODUCT", line 8
+ORA-04088: error during execution of trigger 'JEYASURYA.BEFORE_DELETE_PRODUCT'
+
+4)Write a trigger to display details of a warehouse branch after it is deleted.
+
+SQL> select * from warehouse_branch where branch_id=2;
+
+ BRANCH_ID BRANCH_NAME     CITY              CAPACITY STATUS
+---------- --------------- --------------- ---------- ---------------
+         2 MADURAI CENTRAL MADURAI               7000 ACTIVE
+
+SQL> CREATE OR REPLACE TRIGGER after_delete_branch
+  2  AFTER DELETE ON warehouse_branch
+  3  FOR EACH ROW
+  4  BEGIN
+  5     DBMS_OUTPUT.PUT_LINE('Warehouse branch deleted: ' || :OLD.branch_name);
+  6  END;
+  7  /
+
+Trigger created.
+
+SQL> DELETE FROM warehouse_branch WHERE branch_id = 2;
+Warehouse branch deleted: MADURAI CENTRAL
+
+SQL> select * from warehouse_branch where branch_id=2;
+
+no rows selected.
+
+5)Write a trigger to prevent updating a product with a negative price.
+
+
+SQL> CREATE OR REPLACE TRIGGER before_update_product
+  2  BEFORE UPDATE ON product
+  3  FOR EACH ROW
+  4  BEGIN
+  5     IF :NEW.price < 0 THEN
+  6        RAISE_APPLICATION_ERROR(-20003,'Price cannot be negative');
+  7     END IF;
+  8  END;
+  9  /
+
+Trigger created.
+
+SQL> UPDATE product SET price = -500 WHERE product_id = 303;
+UPDATE product SET price = -500 WHERE product_id = 303
+       *
+ERROR at line 1:
+ORA-20003: Price cannot be negative
+ORA-06512: at "JEYASURYA.BEFORE_UPDATE_PRODUCT", line 3
+ORA-04088: error during execution of trigger 'JEYASURYA.BEFORE_UPDATE_PRODUCT'
+
+6)Write a trigger to display the updated price of a product after modification.
+
+SQL> CREATE OR REPLACE TRIGGER after_update_product
+  2  AFTER UPDATE ON product
+  3  FOR EACH ROW
+  4  BEGIN
+  5     DBMS_OUTPUT.PUT_LINE('Product ' || :OLD.product_id ||
+  6                          ' updated. New price: ' || :NEW.price);
+  7  END;
+  8  /
+
+Trigger created.
+
+SQL> UPDATE product SET price = price + 100 WHERE product_id = 105;
+Product 105 updated. New price: 9100
+
+1 row updated.
+
+7)Write a compound trigger to update the inventory timestamp whenever records are inserted or deleted in order_items.
+
+SQL> CREATE OR REPLACE TRIGGER compound_trigger_inventory
+  2  FOR INSERT OR DELETE ON order_items
+  3  COMPOUND TRIGGER
+  4     v_change NUMBER := 1;
+  5     BEFORE EACH ROW IS
+  6     BEGIN
+  7        IF INSERTING THEN
+  8           UPDATE warehouse_inventory
+  9           SET last_update_date = SYSDATE
+ 10           WHERE product_id = :NEW.product_id;
+ 11        END IF;
+ 12     END BEFORE EACH ROW;
+ 13
+ 14     AFTER EACH ROW IS
+ 15     BEGIN
+ 16        IF DELETING THEN
+ 17           UPDATE warehouse_inventory
+ 18           SET last_update_date = SYSDATE
+ 19           WHERE product_id = :OLD.product_id;
+ 20        END IF;
+ 21     END AFTER EACH ROW;
+ 22  END compound_trigger_inventory;
+ 23  /
+
+Trigger created.
+
+//check insert
+
+SQL> select * from warehouse_inventory where product_id=104;
+
+ BRANCH_ID PRODUCT_ID RACK_NUMBER          LAST_UPDA
+---------- ---------- -------------------- ---------
+         2        104 R4                   08-FEB-26
+
+SQL> INSERT INTO order_items(order_item_id,sale_id,product_id,quantity)
+  2  VALUES(319,216,104,10);
+
+1 row created.
+
+SQL> select * from warehouse_inventory where product_id=104;
+
+ BRANCH_ID PRODUCT_ID RACK_NUMBER          LAST_UPDA
+---------- ---------- -------------------- ---------
+         2        104 R4                   17-MAR-26
+
+
+//check delete
+SQL> select * from warehouse_inventory where product_id=104;
+
+ BRANCH_ID PRODUCT_ID RACK_NUMBER          LAST_UPDA
+---------- ---------- -------------------- ---------
+         2        104 R4                   17-MAR-26
+
+SQL> DELETE FROM order_items WHERE order_item_id =319;
+
+1 row deleted.
+
+SQL> select * from warehouse_inventory where product_id=104;
+
+ BRANCH_ID PRODUCT_ID RACK_NUMBER          LAST_UPDA
+---------- ---------- -------------------- ---------
+         2        104 R4                   17-MAR-26 
+
+8)Write a trigger to update the inventory timestamp whenever a stock movement operation (insert or delete) occurs.
+
+
+SQL> CREATE OR REPLACE TRIGGER statement_trigger_stock
+  2  BEFORE INSERT OR DELETE ON stock_movement
+  3  DECLARE
+  4  BEGIN
+  5     UPDATE warehouse_inventory
+  6     SET last_update_date = SYSDATE;
+  7  END;
+  8  /
+
+Trigger created.
+
+SQL> INSERT INTO stock_movement(movement_id,product_id,branch_id,movement_date)
+  2  VALUES(10,103,2,SYSDATE);
+
+1 row created.
+
+SQL> DELETE FROM stock_movement WHERE movement_id = 10;
+
+1 row deleted.
+
+SQL> SELECT * FROM warehouse_inventory;
+
+ BRANCH_ID PRODUCT_ID RACK_NUMBER          LAST_UPDA
+---------- ---------- -------------------- ---------
+         2        315 R6                   17-MAR-26
+         2        103 R3                   17-MAR-26
+         2        104 R4                   17-MAR-26
+         2        308 R7                   17-MAR-26
+         6        306 R20                  17-MAR-26
+         6        307 R21                  17-MAR-26
+         6        301 R20                  17-MAR-26
+         6        303 R21                  17-MAR-26
+        11        111 R11                  17-MAR-26
+        12        112 R12                  17-MAR-26
+         6        113 R13                  17-MAR-26
+
+11 rows selected.
+
+
+9)Write a trigger to insert the same product record into a backup table after inserting into product.
+
+SQL> CREATE OR REPLACE TRIGGER trg_product_copy
+  2  AFTER INSERT ON product
+  3  FOR EACH ROW
+  4  BEGIN
+  5      INSERT INTO product_copy1(product_id, product_name, price, category_id, supplier_id, price_category)
+  6      VALUES(:NEW.product_id, :NEW.product_name, :NEW.price, :NEW.category_id, :NEW.supplier_id, :NEW.price_category);
+  7  END;
+  8  /
+
+Trigger created.
+
+SQL> SELECT * FROM product_copy1;
+
+no rows selected
+
+SQL> INSERT INTO product(product_id, product_name, price)
+  2  VALUES(999, 'Test Product', 1500);
+
+1 row created.
+
+SQL> SELECT * FROM product_copy;
+
+PRODUCT_ID PRODUCT_NAME         PRICE CATEGORY_ID SUPPLIER_ID
+---------- --------------- ---------- ----------- -----------
+PRICE_CATEGORY
+--------------------
+       301 Smart Watch           7000           1           2
+
+
+       303 Gaming Mouse          1800           3           2
+
+
+       304 Laser Printer        17000           2           3
+
+       308 Office Desk          14000           4           3
+
+
+       309 Ergonomic Chair       7500           4           2
+
+
+       313 LED Monitor          13500           1           2
+
+
+PRODUCT_ID PRODUCT_NAME         PRICE CATEGORY_ID SUPPLIER_ID
+---------- --------------- ---------- ----------- -----------
+PRICE_CATEGORY
+--------------------
+
+       314 Tablet Pro           22000           1           3
+
+
+       315 Thermal Printer      11000           2           2
+
+
+       316 Server Rack          28000           4           3
+
+
+PRODUCT_ID PRODUCT_NAME         PRICE CATEGORY_ID SUPPLIER_ID
+---------- --------------- ---------- ----------- -----------
+PRICE_CATEGORY
+--------------------
+
+       318 Graphics Tablet      12500           1           3
+
+
+       319 IP Camera             6800           3           2
+
+
+       104 Printer              15000           2           3
+
+21 rows selected.
+
+10)Write a trigger to insert a warehouse branch into a backup table and set its status based on capacity.
+
+SQL> CREATE OR REPLACE TRIGGER trg_branch_copy_status
+  2  AFTER INSERT ON warehouse_branch
+  3  FOR EACH ROW
+  4  BEGIN
+  5      INSERT INTO warehouse_branch_copy
+  6      (branch_id, branch_name, city, capacity, status)
+  7      VALUES
+  8      (:NEW.branch_id, :NEW.branch_name, :NEW.city, :NEW.capacity, NULL);
+  9
+ 10      IF :NEW.capacity > 4000 THEN
+ 11          UPDATE warehouse_branch_copy
+ 12          SET status = 'LARGE'
+ 13          WHERE branch_id = :NEW.branch_id;
+ 14
+ 15      ELSIF :NEW.capacity BETWEEN 2000 AND 4000 THEN
+ 16          UPDATE warehouse_branch_copy
+ 17          SET status = 'MEDIUM'
+ 18          WHERE branch_id = :NEW.branch_id;
+ 19
+ 20      ELSE
+ 21          UPDATE warehouse_branch_copy
+ 22          SET status = 'SMALL'
+ 23          WHERE branch_id = :NEW.branch_id;
+ 24      END IF;
+ 25  END;
+ 26  /
+
+Trigger created.
+
+SQL> INSERT INTO warehouse_branch
+  2  VALUES(201, 'Mini Branch', 'Madurai', 1000, 'ACTIVE');
+
+1 row created.
+
+SQL> INSERT INTO warehouse_branch
+  2  VALUES(202, 'City Branch', 'Chennai', 3000, 'ACTIVE');
+
+1 row created.
+
+SQL> INSERT INTO warehouse_branch
+  2  VALUES(203, 'Mega Branch', 'Coimbatore', 6000, 'ACTIVE');
+
+1 row created.
+
+
+SQL> SELECT branch_id, branch_name, capacity, status
+  2  FROM warehouse_branch_copy;
+
+ BRANCH_ID BRANCH_NAME       CAPACITY STATUS
+---------- --------------- ---------- ---------------
+       201 Mini Branch           1000 SMALL
+       202 City Branch           3000 MEDIUM
+       203 Mega Branch           6000 LARGE
+
+
+//HACKERRANK
+
+SELF 1
+
+A) Create a trigger to automatically update last_update_date in warehouse_inventory when a row is updated.
+
+SQL>  CONNECT jeyasurya/surya123@localhost:1521/XEPDB1
+Connected.
+SQL> CREATE OR REPLACE TRIGGER trg_update_timestamp
+  2  BEFORE UPDATE ON warehouse_inventory
+  3  FOR EACH ROW
+  4  BEGIN
+  5      :NEW.last_update_date := SYSDATE;
+  6  END;
+  7  /
+
+Trigger created.
+
+SQL> UPDATE warehouse_inventory SET rack_number = 'R99' WHERE product_id = 103;
+
+1 row updated.
+
+SQL> SELECT * FROM warehouse_inventory WHERE product_id = 103;
+
+ BRANCH_ID PRODUCT_ID RACK_NUMBER          LAST_UPDA
+---------- ---------- -------------------- ---------
+         2        103 R99                  25-MAR-26
+
+B)Create a trigger to prevent updates on product price during restricted hours (6PM–9AM).
+
+SQL> CREATE OR REPLACE TRIGGER trg_time_restrict
+  2  BEFORE UPDATE ON product
+  3  FOR EACH ROW
+  4  BEGIN
+  5      IF TO_NUMBER(TO_CHAR(SYSDATE,'HH24')) >= 18 OR
+  6         TO_NUMBER(TO_CHAR(SYSDATE,'HH24')) < 9 THEN
+  7          RAISE_APPLICATION_ERROR(-20010,'Updates not allowed at this time');
+  8      END IF;
+  9  END;
+ 10  /
+
+Trigger created.
+
+SQL> UPDATE product SET price = price + 100 WHERE product_id = 301;
+UPDATE product SET price = price + 100 WHERE product_id = 301
+       *
+ERROR at line 1:
+ORA-20010: Updates not allowed at this time
+ORA-06512: at "JEYASURYA.TRG_TIME_RESTRICT", line 4
+ORA-04088: error during execution of trigger 'JEYASURYA.TRG_TIME_RESTRICT'
+
+
+SELF 2
+
+A)Write a trigger to prevent deletion of a product if it exists in the order_items table.
+
+SQL> SELECT * FROM order_items WHERE product_id =102;
+
+ORDER_ITEM_ID    SALE_ID PRODUCT_ID   QUANTITY DELIVERY_
+------------- ---------- ---------- ---------- ---------
+          308        202        102          3 16-JAN-25
+          302        202        102          5 16-FEB-26
+
+SQL> CREATE OR REPLACE TRIGGER before_delete_product
+  2  BEFORE DELETE ON product
+  3  FOR EACH ROW
+  4  DECLARE
+  5     v_count NUMBER;
+  6  BEGIN
+  7     SELECT COUNT(*) INTO v_count
+  8     FROM order_items
+  9     WHERE product_id = :OLD.product_id;
+ 10     IF v_count > 0 THEN
+ 11        RAISE_APPLICATION_ERROR(-20002,'Product exists in orders. Cannot delete.');
+ 12     END IF;
+ 13  END;
+ 14  /
+
+Trigger created.
+
+SQL> select * from product where product_id=318;
+
+PRODUCT_ID PRODUCT_NAME         PRICE CATEGORY_ID SUPPLIER_ID
+---------- --------------- ---------- ----------- -----------
+PRICE_CATEGORY
+--------------------
+       318 Graphics Tablet      13125           1           3
+
+
+SQL> select * from order_items where product_id=318;
+
+no rows selected
+
+SQL> delete from product where product_id=318;
+
+1 row deleted.
+
+SQL> DELETE FROM product WHERE product_id = 102;
+DELETE FROM product WHERE product_id = 102
+            *
+ERROR at line 1:
+ORA-20002: Product exists in orders. Cannot delete.
+ORA-06512: at "JEYASURYA.BEFORE_DELETE_PRODUCT", line 8
+ORA-04088: error during execution of trigger 'JEYASURYA.BEFORE_DELETE_PRODUCT'
+
+ B)Create a trigger to prevent inserting duplicate product names.
+
+SQL> INSERT INTO product VALUES(2000,'Laptop',50000,2,2,1);
+
+1 row created.
+
+SQL> CREATE OR REPLACE TRIGGER trg_duplicate_product
+  2  BEFORE INSERT ON product
+  3  FOR EACH ROW
+  4  DECLARE
+  5      v_count NUMBER;
+  6  BEGIN
+  7      SELECT COUNT(*) INTO v_count
+  8      FROM product
+  9      WHERE product_name = :NEW.product_name;
+ 10
+ 11      IF v_count > 0 THEN
+ 12          RAISE_APPLICATION_ERROR(-20012,'Duplicate product name not allowed');
+ 13      END IF;
+ 14  END;
+ 15  /
+
+Trigger created.
+
+
+SQL> INSERT INTO product VALUES(2000,'Laptop',50000,2,2,1);
+INSERT INTO product VALUES(2000,'Laptop',50000,2,2,1)
+            *
+ERROR at line 1:
+ORA-20012: Duplicate product name not allowed
+ORA-06512: at "JEYASURYA.TRG_DUPLICATE_PRODUCT", line 9
+ORA-04088: error during execution of trigger 'JEYASURYA.TRG_DUPLICATE_PRODUCT'
+
+
+SELF 3
+
+ A)Create a trigger to check stock availability before inserting into order_items.
+
+SQL> CREATE OR REPLACE TRIGGER trg_check_stock
+  2  BEFORE INSERT ON order_items
+  3  FOR EACH ROW
+  4  DECLARE
+  5      v_count NUMBER;
+  6  BEGIN
+  7      SELECT COUNT(*) INTO v_count
+  8      FROM warehouse_inventory
+  9      WHERE product_id = :NEW.product_id;
+ 10
+ 11      IF v_count = 0 THEN
+ 12          RAISE_APPLICATION_ERROR(-20013,'Product not available in stock');
+ 13      END IF;
+ 14  END;
+ 15  /
+
+Trigger created.
+
+SQL> INSERT INTO order_items VALUES (400, 202, 103, 2, SYSDATE);
+
+1 row created.
+
+SQL> INSERT INTO order_items VALUES(900,200,999,5,sysdate);
+INSERT INTO order_items VALUES(900,200,999,5,sysdate)
+            *
+ERROR at line 1:
+ORA-20013: Product not available in stock
+ORA-06512: at "JEYASURYA.TRG_CHECK_STOCK", line 9
+ORA-04088: error during execution of trigger 'JEYASURYA.TRG_CHECK_STOCK'
+
+
+B)Create a trigger to display an error notification message when invalid data is inserted.
+
+SQL> CREATE OR REPLACE TRIGGER trg_error_notify
+  2  BEFORE INSERT ON product
+  3  FOR EACH ROW
+  4  BEGIN
+  5      IF :NEW.price < 0 THEN
+  6          DBMS_OUTPUT.PUT_LINE('ALERT: Invalid price detected!');
+  7          RAISE_APPLICATION_ERROR(-20014,'Price cannot be negative');
+  8      END IF;
+  9  END;
+ 10  /
+
+Trigger created.
+
+
+SQL> insert into product values(444,'positive price',2999,1,2,1);
+
+1 row created.
+
+SQL> insert into product values(444,'negative price',-2999,1,2,1);
+insert into product values(444,'negative price',-2999,1,2,1)
+            *
+ERROR at line 1:
+ORA-20014: Price cannot be negative
+ORA-06512: at "JEYASURYA.TRG_ERROR_NOTIFY", line 4
+ORA-04088: error during execution of trigger 'JEYASURYA.TRG_ERROR_NOTIFY'
+
+
+//question paper
+
+7A)
+A)
+
+SQL> update enroll set marks = marks * 1.10 where course_id in ( select course_id  from teaches where lower(instructor_name) = 'dr.kumar');
+
+2 rows updated.
+
+SQL> select * from enroll where course_id=201;
+
+STUDENT_ID  COURSE_ID      MARKS
+---------- ---------- ----------
+       101        201       93.5
+       104        201         99
+
+B)
+
+SQL> SELECT student_name FROM Student WHERE student_id IN ( SELECT student_id FROM Enroll WHERE marks = ( SELECT MAX(marks) FROM Enroll WHERE marks < (SELECT MAX(marks) FROM Enroll)));
+
+STUDENT_NAME
+--------------------
+arun
+
+C)
+
+SQL> SELECT DISTINCT c.course_name FROM Course c JOIN Enroll e ON c.course_id = e.course_id WHERE e.marks > (SELECT AVG(marks) FROM Enroll);
+
+COURSE_NAME
+--------------------------------------------------
+data structures
+database systems
+
+
+D)
+
+SQL> SELECT s.student_name, s.city FROM Student s JOIN Enroll e ON s.student_id = e.student_id WHERE e.marks = (SELECT MAX(marks) FROM Enroll);
+
+STUDENT_NAME    CITY
+--------------- ---------------
+prince          madurai
+
+
+E)
+
+
+SQL> CREATE OR REPLACE FUNCTION get_max_enroll_course
+  2  RETURN VARCHAR2
+  3  IS
+  4      v_course_name Course.course_name%TYPE;
+  5  BEGIN
+  6      SELECT c.course_name
+  7      INTO v_course_name
+  8      FROM Course c
+  9      WHERE c.course_id = (
+ 10          SELECT course_id
+ 11          FROM (
+ 12              SELECT course_id, COUNT(*) AS total
+ 13              FROM Enroll
+ 14              GROUP BY course_id
+ 15              ORDER BY total DESC
+ 16          )
+ 17          WHERE ROWNUM = 1
+ 18      );
+ 19
+ 20      RETURN v_course_name;
+ 21  END;
+ 22  /
+
+Function created.
+
+SQL> SELECT get_max_enroll_course FROM dual;
+
+GET_MAX_ENROLL_COURSE
+--------------------------
+data structures
+
+
+
+7B) 
+A)
+
+SQL> select * from staff;
+
+
+  STAFF_ID STAFF_NAME      BLOCK      BUILDING
+---------- --------------- ---------- ----------
+       201 malar           a          main
+       202 kavya           b          main
+       203 vijay           c          sub
+       204 vishnu          a          primary
+
+SQL> SELECT staff_name FROM Staff WHERE LOWER(building) = 'a' OR LOWER(block) = 'c';
+
+STAFF_NAME
+---------------
+Vijay
+
+B)
+
+SQL> select b.*, m.* from books b join borrow br on b.book_id = br.book_id join members m on m.member_id = br.member_id join fine f on f.member_id = m.member_id where b.category in ('programming', 'database') and f.amount > 20;
+
+   BOOK_ID BOOK_TITLE      AUTHOR          CATEGORY             PRICE  MEMBER_ID
+---------- --------------- --------------- --------------- ---------- ----------
+MEMBER_NAME     DEPT            ADDRESS         PHONE
+--------------- --------------- --------------- ---------------
+       101 data structures bhuvi           programming            450          5
+hari            cse             coimbatore      9090909090
+
+
+C)
+
+SQL> CREATE OR REPLACE VIEW member_book_view AS
+  2  SELECT m.member_id, m.member_name, b.book_title
+  3  FROM Members m
+  4  JOIN Borrow br ON m.member_id = br.member_id
+  5  JOIN Books b ON b.book_id = br.book_id;
+
+View created.
+
+SQL> SELECT * FROM member_book_view;
+
+ MEMBER_ID MEMBER_NAME     BOOK_TITLE
+---------- --------------- ---------------
+         1 arun            data structures
+         4 prince          data structures
+         5 hari            data structures
+         2 surya           database system
+                           s
+
+         3 jones           operating syste
+                           ms
+
+D)
+
+SQL> CREATE OR REPLACE PROCEDURE add_book (
+  2      p_id NUMBER,
+  3      p_title VARCHAR2,
+  4      p_author VARCHAR2,
+  5      p_category VARCHAR2,
+  6      p_price NUMBER
+  7  )
+  8  IS
+  9  BEGIN
+ 10      INSERT INTO Books
+ 11      VALUES (p_id, p_title, p_author, p_category, p_price);
+ 12
+ 13      COMMIT;
+ 14  END;
+ 15  /
+
+Procedure created.
+
+SQL> select * from books;
+
+   BOOK_ID BOOK_TITLE      AUTHOR          CATEGORY             PRICE
+---------- --------------- --------------- --------------- ----------
+       101 data structures bhuvi           programming            450
+       102 database system valar           database               550
+           s
+
+       103 operating syste charles         os                     600
+           ms
+
+       104 computer networ bala            network                500
+           ks
+
+       105 software engine prem            software               480
+
+   BOOK_ID BOOK_TITLE      AUTHOR          CATEGORY             PRICE
+---------- --------------- --------------- --------------- ----------
+           ering
+
+
+SQL> BEGIN
+  2      add_book(106, 'ai basics', 'russell', 'ai', 700);
+  3  END;
+  4  /
+
+PL/SQL procedure successfully completed.
+
+SQL> select * from books where book_id=106;
+
+   BOOK_ID BOOK_TITLE      AUTHOR          CATEGORY             PRICE
+---------- --------------- --------------- --------------- ----------
+       106 ai basics       russell         ai                     700
+
+E)
+
+SQL> select member_name from members;
+
+MEMBER_NAME
+---------------
+arun
+surya
+jones
+prince
+hari
+
+Elapsed: 00:00:00.03
+
+SQL> Create index idx_member_name on Members(member_name);
+
+Index created.
+
+Elapsed: 00:00:00.01
+
+SQL> select member_name from members;
+
+MEMBER_NAME
+---------------
+arun
+surya
+jones
+prince
+hari
+
+Elapsed: 00:00:00.00
+
+
+
+
+
