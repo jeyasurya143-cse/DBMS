@@ -1,0 +1,366 @@
+//set 
+
+//union
+
+SQL> select product_id from product union select product_id from order_items;
+
+PRODUCT_ID
+----------
+       102
+       103
+       104
+       105
+       111
+       112
+       113
+
+7 rows selected.
+
+//union all
+
+SQL> select product_id from product union all select product_id from order_items;
+
+PRODUCT_ID
+----------
+       102
+       103
+       104
+       105
+       111
+       112
+       113
+       102
+       111
+       112
+       103
+
+PRODUCT_ID
+----------
+       104
+       105
+       113
+
+//intersect
+
+SQL> select product_id from product intersect select product_id from warehouse_inventory;
+
+PRODUCT_ID
+----------
+       103
+       104
+       111
+       112
+
+//minus(A-B)
+
+SQL> select sale_id from sales minus select sale_id from returns;
+
+   SALE_ID
+----------
+       215
+       204
+
+//minus (B-A)
+SQL> SELECT sale_id FROM returns MINUS SELECT sale_id FROM sales where sale_status='completed';
+
+   SALE_ID
+----------
+       203
+       202
+       212
+       211
+       213
+       214
+
+6 rows selected.
+
+
+//except
+
+SQL> select sale_id from sales except select sale_id from returns;
+
+   SALE_ID
+----------
+       215
+       204
+
+
+//minus
+
+SQL> SELECT sale_id FROM sales WHERE sale_status = 'Completed' MINUS SELECT sale_id FROM returns;
+
+   SALE_ID
+----------
+       216
+
+//intersect all
+
+SQL> select product_id from product intersect all select product_id from warehouse_inventory;
+
+PRODUCT_ID
+----------
+       103
+       104
+       111
+       112
+
+
+//using
+
+SQL> select product_name,rack_number from warehouse_inventory join product using (product_id);
+
+PRODUCT_NAME         RACK_NUMBER
+-------------------- --------------------
+Printer              R4
+Keyboard             R3
+Tablet               R11
+Projector            R12
+Webcam               R13
+
+
+
+
+
+
+
+//join
+
+SQL> SELECT w.branch_name,wi.product_id from warehouse_branch w join warehouse_inventory wi ON w.branch_id = wi.branch_id;
+
+BRANCH_NAME                                        PRODUCT_ID
+-------------------------------------------------- ----------
+MADURAI CENTRAL                                           103
+MADURAI CENTRAL                                           104
+KARUR HUB                                                 111
+NAMAKKAL DEPOT                                            112
+
+
+
+//self join
+
+
+SQL> SELECT b1.branch_id AS Branch1_ID, b1.branch_name AS Branch1_Name, b2.branch_id AS Branch2_ID, b2.branch_name AS Branch2_Name, b1.city FROM warehouse_branch b1 JOIN warehouse_branch b2 ON b1.city = b2.city AND b1.branch_id < b2.branch_id;
+
+BRANCH1_ID BRANCH1_NAME                                       BRANCH2_ID
+---------- -------------------------------------------------- ----------
+BRANCH2_NAME
+--------------------------------------------------
+CITY
+--------------------------------------------------
+         2 MADURAI CENTRAL                                             7
+MADURAI EAST
+MADURAI
+
+         4 CHENNAI NORTH                                               8
+CHENNAI SOUTH
+
+
+//left
+SQL> select s.supplier_name ,sp.product_id from supplier s left join supplies sp on s.supplier_id=sp.supplier_id;
+
+SUPPLIER_NAME                                      PRODUCT_ID
+-------------------------------------------------- ----------
+SURYA TRADERS                                             102
+SURYA TRADERS                                             103
+JONES DISTRIBUTORS                                        104
+SAKTHI SUPPLY
+
+
+//Cross
+
+SQL> SELECT p.product_name, w.branch_name FROM product P CROSS JOIN warehouse_branch w;
+
+PRODUCT_NAME         BRANCH_NAME
+-------------------- --------------------
+Printer              MADURAI EAST
+Printer              CHENNAI SOUTH
+Printer              SIVAKASI MAIN
+Printer              MADURAI CENTRAL
+Printer              VIRUDUNAGAR EAST
+Printer              CHENNAI NORTH
+Printer              COIMBATORE HUB
+Printer              TRICHY DEPOT
+Printer              TENKASI WEST
+Printer              ERODE CENTRAL
+Printer              KARUR HUB
+
+PRODUCT_NAME         BRANCH_NAME
+-------------------- --------------------
+Printer              NAMAKKAL DEPOT
+Mouse                MADURAI EAST
+Mouse                CHENNAI SOUTH
+Mouse                SIVAKASI MAIN
+Mouse                MADURAI CENTRAL
+Mouse                VIRUDUNAGAR EAST
+Mouse                CHENNAI NORTH
+Mouse                COIMBATORE HUB
+Mouse                TRICHY DEPOT
+Mouse                TENKASI WEST
+Mouse                ERODE CENTRAL
+
+PRODUCT_NAME         BRANCH_NAME
+-------------------- --------------------
+Mouse                KARUR HUB
+Mouse                NAMAKKAL DEPOT
+Keyboard             MADURAI EAST
+Keyboard             CHENNAI SOUTH
+Keyboard             SIVAKASI MAIN
+Keyboard             MADURAI CENTRAL
+Keyboard             VIRUDUNAGAR EAST
+Keyboard             CHENNAI NORTH
+Keyboard             COIMBATORE HUB
+Keyboard             TRICHY DEPOT
+Keyboard             TENKASI WEST
+
+PRODUCT_NAME         BRANCH_NAME
+-------------------- --------------------
+Keyboard             ERODE CENTRAL
+Keyboard             KARUR HUB
+Keyboard             NAMAKKAL DEPOT
+Scanner              MADURAI EAST
+Scanner              CHENNAI SOUTH
+Scanner              SIVAKASI MAIN
+Scanner              MADURAI CENTRAL
+Scanner              VIRUDUNAGAR EAST
+Scanner              CHENNAI NORTH
+Scanner              COIMBATORE HUB
+Scanner              TRICHY DEPOT
+
+PRODUCT_NAME         BRANCH_NAME
+-------------------- --------------------
+Scanner              TENKASI WEST
+Scanner              ERODE CENTRAL
+Scanner              KARUR HUB
+Scanner              NAMAKKAL DEPOT
+Tablet               MADURAI EAST
+Tablet               CHENNAI SOUTH
+Tablet               SIVAKASI MAIN
+Tablet               MADURAI CENTRAL
+Tablet               VIRUDUNAGAR EAST
+Tablet               CHENNAI NORTH
+Tablet               COIMBATORE HUB
+
+PRODUCT_NAME         BRANCH_NAME
+-------------------- --------------------
+Tablet               TRICHY DEPOT
+Tablet               TENKASI WEST
+Tablet               ERODE CENTRAL
+Tablet               KARUR HUB
+Tablet               NAMAKKAL DEPOT
+Projector            MADURAI EAST
+Projector            CHENNAI SOUTH
+Projector            SIVAKASI MAIN
+Projector            MADURAI CENTRAL
+Projector            VIRUDUNAGAR EAST
+Projector            CHENNAI NORTH
+
+PRODUCT_NAME         BRANCH_NAME
+-------------------- --------------------
+Projector            COIMBATORE HUB
+Projector            TRICHY DEPOT
+Projector            TENKASI WEST
+Projector            ERODE CENTRAL
+Projector            KARUR HUB
+Projector            NAMAKKAL DEPOT
+Webcam               MADURAI EAST
+Webcam               CHENNAI SOUTH
+Webcam               SIVAKASI MAIN
+Webcam               MADURAI CENTRAL
+Webcam               VIRUDUNAGAR EAST
+
+PRODUCT_NAME         BRANCH_NAME
+-------------------- --------------------
+Webcam               CHENNAI NORTH
+Webcam               COIMBATORE HUB
+Webcam               TRICHY DEPOT
+Webcam               TENKASI WEST
+Webcam               ERODE CENTRAL
+Webcam               KARUR HUB
+Webcam               NAMAKKAL DEPOT
+
+84 rows selected.
+
+
+//multiple join
+
+SQL> SELECT s.sale_id, p.product_name FROM sales s JOIN order_items oi ON s.sale_id = oi.sale_id JOIN product p ON oi.product_id = p.product_id WHERE s.sale_status='Completed';
+
+   SALE_ID PRODUCT_NAME
+---------- --------------------
+       216 Printer
+       202 Mouse
+       213 Keyboard
+       212 Projector
+       213 Webcam
+
+//natural join
+
+
+SQL> select * from warehouse_inventory natural join warehouse_branch;
+
+ BRANCH_ID PRODUCT_ID RACK_NUMBER          LAST_UPDA BRANCH_NAME          CITY                   CAPACITY STATUS
+---------- ---------- -------------------- --------- -------------------- -------------------- ---------- --------------------
+         2        103 R3                   08-FEB-26 MADURAI CENTRAL      MADURAI                    7000 ACTIVE
+         2        104 R4                   08-FEB-26 MADURAI CENTRAL      MADURAI                    7000 ACTIVE
+         6        113 R13                  22-FEB-26 TRICHY DEPOT         TRICHY                     4000 INACTIVE
+        11        111 R11                  22-FEB-26 KARUR HUB            KARUR                      6500 ACTIVE
+        12        112 R12                  22-FEB-26 NAMAKKAL DEPOT       NAMAKKAL                   5200 ACTIVE
+
+
+//full outer
+
+SQL> SELECT w.branch_name,p.product_name FROM warehouse_inventory wi FULL OUTER JOIN warehouse_branch w ON wi.branch_id = w.branch_id FULL OUTER JOIN product p ON wi.product_id = p.product_id ;
+
+BRANCH_NAME          PRODUCT_NAME
+-------------------- --------------------
+MADURAI EAST
+CHENNAI SOUTH
+SIVAKASI MAIN
+MADURAI CENTRAL      Keyboard
+MADURAI CENTRAL      Printer
+VIRUDUNAGAR EAST
+CHENNAI NORTH
+COIMBATORE HUB
+TRICHY DEPOT         Webcam
+TENKASI WEST
+ERODE CENTRAL
+
+BRANCH_NAME          PRODUCT_NAME
+-------------------- --------------------
+KARUR HUB            Tablet
+NAMAKKAL DEPOT       Projector
+                     Scanner
+                     Mouse
+
+15 rows selected.
+
+
+//RIGHT
+
+SQL> SELECT w.branch_name, wi.product_id FROM warehouse_branch w RIGHT JOIN warehouse_inventory wi ON w.branch_id = wi.branch_id WHERE w.status='ACTIVE';
+
+BRANCH_NAME                                        PRODUCT_ID
+-------------------------------------------------- ----------
+MADURAI CENTRAL                                           103
+MADURAI CENTRAL                                           104
+KARUR HUB                                                 111
+NAMAKKAL DEPOT                                            112
+							  113
+
+
+
+//using
+
+SQL> select product_name,rack_number from warehouse_inventory join product using (product_id);
+
+PRODUCT_NAME         RACK_NUMBER
+-------------------- --------------------
+Printer              R4
+Keyboard             R3
+Tablet               R11
+Projector            R12
+Webcam               R13
+
+
+
+
