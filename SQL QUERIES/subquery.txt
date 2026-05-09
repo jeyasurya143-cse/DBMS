@@ -1,0 +1,412 @@
+//subquery
+
+SQL> SELECT branch_name, capacity FROM warehouse_branch WHERE capacity > (SELECT AVG(capacity) FROM warehouse_branch);
+
+SQL> SELECT AVG(capacity) FROM warehouse_branch;
+
+AVG(CAPACITY)
+-------------
+   5933.33333
+
+
+BRANCH_NAME                                          CAPACITY
+-------------------------------------------------- ----------
+MADURAI EAST                                             7000
+MADURAI CENTRAL                                          7000
+CHENNAI NORTH                                            8000
+COIMBATORE HUB                                           7000
+TENKASI WEST                                             7000
+KARUR HUB                                                6500
+
+6 rows selected.
+
+//multi row subquery
+
+SQL> SELECT product_name FROM product WHERE product_id IN (SELECT product_id FROM warehouse_inventory);
+
+
+SQL> SELECT product_id FROM warehouse_inventory;
+
+PRODUCT_ID
+----------
+       103
+       104
+       113
+       111
+       112
+
+
+PRODUCT_NAME
+--------------------
+Keyboard
+Printer
+Tablet
+Projector
+Webcam
+
+
+SQL> SELECT sale_id FROM returns;
+
+   SALE_ID
+----------
+       203
+       202
+       212
+       211
+       213
+       214
+
+6 rows selected.
+
+SQL> SELECT sale_id FROM sales WHERE sale_id IN (SELECT sale_id FROM returns);
+
+   SALE_ID
+----------
+       202
+       203
+       211
+       212
+       213
+       214
+
+6 rows selected.
+
+//any
+
+SQL> SELECT product_name, price FROM product WHERE price < ANY (SELECT refund_amount FROM returns);
+
+
+
+SQL> SELECT refund_amount FROM returns;
+
+REFUND_AMOUNT
+-------------
+            0
+            0
+        25000
+        18000
+         2200
+        15000
+
+6 rows selected.
+
+PRODUCT_NAME              PRICE
+-------------------- ----------
+Mouse                       500
+Keyboard                   2200
+Webcam                     3500
+Scanner                    9000
+Printer                   15000
+Tablet                    18000
+
+6 rows selected.
+
+SQL> SELECT product_name, price FROM product WHERE price > ANY (SELECT refund_amount FROM returns);
+
+
+
+SQL> SELECT refund_amount FROM returns;
+
+REFUND_AMOUNT
+-------------
+            0
+            0
+        25000
+        18000
+         2200
+        15000
+
+6 rows selected.
+
+PRODUCT_NAME              PRICE
+-------------------- ----------
+Projector                 25000
+Tablet                    18000
+Printer                   15000
+Scanner                    9000
+Webcam                     3500
+Keyboard                   2200
+Mouse                       500
+
+7 rows selected.
+
+SQL> SELECT product_name, price FROM product WHERE price = ANY (SELECT refund_amount FROM returns);
+
+
+SQL> SELECT refund_amount FROM returns;
+
+REFUND_AMOUNT
+-------------
+            0
+            0
+        25000
+        18000
+         2200
+        15000
+
+6 rows selected.
+
+PRODUCT_NAME              PRICE
+-------------------- ----------
+Projector                 25000
+Tablet                    18000
+Keyboard                   2200
+Printer                   15000
+
+//all
+
+SQL> SELECT product_name, price FROM product WHERE price >= all (SELECT refund_amount FROM returns);
+
+
+SQL> SELECT refund_amount FROM returns;
+
+REFUND_AMOUNT
+-------------
+            0
+            0
+        25000
+        18000
+         2200
+        15000
+
+6 rows selected.
+
+PRODUCT_NAME              PRICE
+-------------------- ----------
+Projector                 25000
+Server                    40000
+
+
+SQL> SELECT product_name, price FROM product WHERE price <= ALL (SELECT refund_amount FROM returns WHERE refund_amount > 0);
+
+SQL> SELECT refund_amount FROM returns WHERE refund_amount > 0 ;
+
+REFUND_AMOUNT
+-------------
+        25000
+        18000
+         2200
+        15000
+
+
+PRODUCT_NAME              PRICE
+-------------------- ----------
+Keyboard                   2200
+Mouse                       500
+
+
+//multi column
+
+SQL> SELECT branch_id, product_id FROM warehouse_inventory WHERE (branch_id, product_id) IN (SELECT branch_id, product_id FROM stock_movement);
+
+
+SQL> SELECT branch_id, product_id FROM stock_movement;
+
+ BRANCH_ID PRODUCT_ID
+---------- ----------
+         1        102
+         2        103
+         2        104
+        11        111
+        12        112
+
+
+ BRANCH_ID PRODUCT_ID
+---------- ----------
+         2        103
+         2        104
+        11        111
+        12        112
+
+//in from clause
+
+SQL> SELECT sale_status, COUNT(*) FROM (SELECT sale_status FROM sales) GROUP BY sale_status;
+
+SALE_STATUS            COUNT(*)
+-------------------- ----------
+Completed                     5
+Cancelled                     2
+Pending                       2
+
+SQL> SELECT sale_status FROM sales;
+
+SALE_STATUS
+--------------------
+Completed
+Completed
+Cancelled
+Pending
+Completed
+Completed
+Pending
+Cancelled
+Completed
+
+9 rows selected.
+
+
+SQL> SELECT product_name FROM (SELECT * FROM product WHERE price BETWEEN 5000 AND 20000);
+
+
+SQL> SELECT * FROM product WHERE price BETWEEN 5000 AND 20000;
+
+PRODUCT_ID PRODUCT_NAME              PRICE CATEGORY_ID SUPPLIER_ID
+---------- -------------------- ---------- ----------- -----------
+       104 Printer                   15000           2           3
+       105 Scanner                    9000           2           3
+       111 Tablet                    18000           1           2
+
+
+PRODUCT_NAME
+--------------------
+Printer
+Scanner
+Tablet
+
+//in select clause
+
+SQL> SELECT product_name, price,(SELECT AVG(price) FROM product) AS avg_price FROM product;
+
+
+
+SQL> SELECT AVG(price) FROM product;
+
+AVG(PRICE)
+----------
+10457.1429
+
+
+PRODUCT_NAME              PRICE  AVG_PRICE 
+-------------------- ---------- ----------
+Printer                   15000      14150
+Mouse                       500      14150
+Keyboard                   2200      14150
+Scanner                    9000      14150
+Server                    40000      14150
+Tablet                    18000      14150
+Projector                 25000      14150
+Webcam                     3500      14150
+
+8 rows selected.
+
+//in having
+
+SQL> SELECT supplier_id, AVG(quantity_received) FROM inward GROUP BY supplier_id HAVING AVG(quantity_received) > (SELECT AVG(quantity_received) FROM inward);
+
+
+SQL> SELECT AVG(quantity_received) FROM inward;
+
+AVG(QUANTITY_RECEIVED)
+----------------------
+            258.333333
+
+
+SUPPLIER_ID AVG(QUANTITY_RECEIVED)
+----------- ----------------------
+          2                    350
+          4                    275
+
+//exists
+
+
+SQL> SELECT product_name FROM product p WHERE EXISTS ( SELECT 1 FROM order_items oi WHERE oi.product_id = p.product_id);
+
+PRODUCT_NAME
+--------------------
+Mouse
+Tablet
+Projector
+Keyboard
+Printer
+Scanner
+Webcam
+
+7 rows selected.
+
+
+//not exists
+
+SQL> SELECT product_name FROM product p WHERE NOT EXISTS ( SELECT 1 FROM order_items oi WHERE oi.product_id = p.product_id);
+
+PRODUCT_NAME
+--------------------
+Server
+
+//with clause
+
+SQL> WITH AvgPrice AS (SELECT AVG(price) AS avg_price FROM product)SELECT product_name,price FROM product WHERE price > (SELECT avg_price FROM AvgPrice);
+
+PRODUCT_NAME              PRICE
+-------------------- ----------
+Printer                   15000
+Server                    40000
+Tablet                    18000
+Projector                 25000
+
+
+//multiple with clause
+
+SQL> WITH AvgCapacity AS (SELECT AVG(capacity) AS avg_cap FROM warehouse_branch ),ActiveBranches AS (SELECT branch_id, branch_name, capacity FROM warehouse_branch WHERE status = 'ACTIVE')SELECT branch_id, branch_name, capacity FROM ActiveBranches WHERE capacity > (SELECT avg_cap FROM AvgCapacity);
+
+ BRANCH_ID BRANCH_NAME                                          CAPACITY
+---------- -------------------------------------------------- ----------
+         2 MADURAI CENTRAL                                          7000
+         4 CHENNAI NORTH                                            8000
+         5 COIMBATORE HUB                                           7000
+        11 KARUR HUB                                                6500
+
+//scalar sq
+
+SQL> SELECT s.sale_id,(SELECT COUNT(*) FROM returns r WHERE r.sale_id = s.sale_id) AS return_count FROM sales s;
+
+   SALE_ID RETURN_COUNT
+---------- ------------
+       202            1
+       203            1
+       204            0
+       211            1
+       212            1
+       213            1
+       214            1
+       215            0
+       216            0
+
+9 rows selected.
+
+
+SQL> SELECT (SELECT AVG(price) FROM product) FROM product WHERE product_id BETWEEN 101 AND 105;
+
+SQL> select * from product where product_id between 101 and 105;
+
+PRODUCT_ID PRODUCT_NAME              PRICE CATEGORY_ID SUPPLIER_ID
+---------- -------------------- ---------- ----------- -----------
+       102 Mouse                       500           3           2
+       103 Keyboard                   2200           3           2
+       104 Printer                   15000           2           3
+       105 Scanner                    9000           2           3
+
+
+SQL> SELECT AVG(price) FROM product;
+
+AVG(PRICE)
+----------
+10457.1429
+
+(SELECTAVG(PRICE)FROMPRODUCT)
+-----------------------------
+                   10457.1429
+                   10457.1429
+                   10457.1429
+                   10457.1429
+
+
+//CORRELATED SUBQUERY
+
+SQL> SELECT branch_name FROM warehouse_branch wb WHERE EXISTS (SELECT 1 FROM stock_movement sm WHERE sm.branch_id = wb.branch_id);
+
+BRANCH_NAME
+--------------------------------------------------/8uii
+SIVAKASI MAIN
+MADURAI CENTRAL
+KARUR HUB
+NAMAKKAL DEPOT
