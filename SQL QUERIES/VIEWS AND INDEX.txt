@@ -1,0 +1,370 @@
+//simple view
+
+SQL> select * from warehouse_branch;
+
+ BRANCH_ID BRANCH_NAME     CITY              CAPACITY STATUS
+---------- --------------- --------------- ---------- --------------------
+         7 MADURAI EAST    MADURAI               7000 INACTVE
+         8 CHENNAI SOUTH   CHENNAI               5000 ACTIVE
+         1 SIVAKASI MAIN   SIVAKASI              5000 ACTIVE
+         2 MADURAI CENTRAL MADURAI               7000 ACTIVE
+         3 VIRUDUNAGAR EAS VIRUDUNAGAR           4500 ACTIVE
+           T
+
+         4 CHENNAI NORTH   CHENNAI               8000 ACTIVE
+         5 COIMBATORE HUB  COIMBATORE            7000 ACTIVE
+         6 TRICHY DEPOT    TRICHY                4000 INACTIVE
+         9 TENKASI WEST    TENKASI               7000 INACTVE
+
+ BRANCH_ID BRANCH_NAME     CITY              CAPACITY STATUS
+---------- --------------- --------------- ---------- --------------------
+        10 ERODE CENTRAL   ERODE                 5000 ACTIVE
+        11 KARUR HUB       KARUR                 6500 ACTIVE
+        12 NAMAKKAL DEPOT  NAMAKKAL              5200 ACTIVE
+
+12 rows selected.
+
+
+SQL> CREATE view branch_city_view AS SELECT branch_name, city FROM warehouse_branch;
+
+View created.
+
+SQL> SELECT * FROM branch_city_view;
+
+BRANCH_NAME     CITY
+--------------- ---------------
+MADURAI EAST    MADURAI
+CHENNAI SOUTH   CHENNAI
+SIVAKASI MAIN   SIVAKASI
+MADURAI CENTRAL MADURAI
+VIRUDUNAGAR EAS VIRUDUNAGAR
+T
+
+CHENNAI NORTH   CHENNAI
+COIMBATORE HUB  COIMBATORE
+TRICHY DEPOT    TRICHY
+TENKASI WEST    TENKASI
+
+BRANCH_NAME     CITY
+--------------- ---------------
+ERODE CENTRAL   ERODE
+KARUR HUB       KARUR
+NAMAKKAL DEPOT  NAMAKKAL
+
+12 rows selected.
+
+//view with where
+
+SQL> SELECT branch_id, branch_name, city FROM warehouse_branch WHERE status = 'ACTIVE';
+
+ BRANCH_ID BRANCH_NAME     CITY
+---------- --------------- ---------------
+         8 CHENNAI SOUTH   CHENNAI
+         1 SIVAKASI MAIN   SIVAKASI
+         2 MADURAI CENTRAL MADURAI
+         3 VIRUDUNAGAR EAST VIRUDUNAGAR
+
+         4 CHENNAI NORTH   CHENNAI
+         5 COIMBATORE HUB  COIMBATORE
+        10 ERODE CENTRAL   ERODE
+        11 KARUR HUB       KARUR
+        12 NAMAKKAL DEPOT  NAMAKKAL
+
+9 rows selected.
+
+SQL> CREATE VIEW active_branch_view AS SELECT branch_id, branch_name, city , status FROM warehouse_branch WHERE status = 'ACTIVE';
+
+View created.
+
+SQL> SELECT * FROM active_branch_view;
+
+ BRANCH_ID BRANCH_NAME     CITY
+---------- --------------- ---------------
+         8 CHENNAI SOUTH   CHENNAI
+         1 SIVAKASI MAIN   SIVAKASI
+         2 MADURAI CENTRAL MADURAI
+         3 VIRUDUNAGAR EAS VIRUDUNAGAR
+           T
+
+         4 CHENNAI NORTH   CHENNAI
+         5 COIMBATORE HUB  COIMBATORE
+        10 ERODE CENTRAL   ERODE
+        11 KARUR HUB       KARUR
+        12 NAMAKKAL DEPOT  NAMAKKAL
+
+9 rows selected.
+
+//view with join
+
+SQL> SELECT s.sale_id, p.product_name, s.sale_status FROM sales s JOIN order_items oi ON s.sale_id = oi.sale_id JOIN product p ON oi.product_id = p.product_id;
+
+   SALE_ID PRODUCT_NAME    SALE_STATUS
+---------- --------------- --------------------
+       202 Mouse           Completed
+       211 Tablet          Pending
+       212 Projector       Completed
+       213 Keyboard        Completed
+       213 Webcam          Completed
+       214 Printer         Pending
+       215 Scanner         Cancelled
+       216 Printer         Completed
+
+8 rows selected.
+
+SQL> CREATE VIEW sales_product_view AS SELECT s.sale_id, p.product_name, s.sale_status FROM sales s JOIN order_items oi ON s.sale_id = oi.sale_id JOIN product p ON oi.product_id = p.product_id;
+
+View created.
+
+SQL> SELECT * FROM sales_product_view;
+
+   SALE_ID PRODUCT_NAME    SALE_STATUS
+---------- --------------- --------------------
+       202 Mouse           Completed
+       211 Tablet          Pending
+       212 Projector       Completed
+       213 Keyboard        Completed
+       213 Webcam          Completed
+       214 Printer         Pending
+       215 Scanner         Cancelled
+       216 Printer         Completed
+
+8 rows selected.
+
+//view with aggregation
+
+SQL> SELECT product_id, SUM(quantity) AS total_quantity FROM order_items GROUP BY product_id;
+
+PRODUCT_ID TOTAL_QUANTITY
+---------- --------------
+       102              5
+       111              3
+       112              1
+       103              4
+       104              4
+       105              3
+       113              2
+
+7 rows selected.
+
+SQL> CREATE VIEW product_total_quantity AS SELECT product_id, SUM(quantity) AS total_quantity FROM order_items GROUP BY product_id;
+
+View created.
+
+SQL> SELECT * FROM product_total_quantity;
+
+PRODUCT_ID TOTAL_QUANTITY
+---------- --------------
+       102              5
+       111              3
+       112              1
+       103              4
+       104              4
+       105              3
+       113              2
+
+7 rows selected.
+
+//nested view
+
+SQL> SELECT product_id, total_quantity FROM product_total_quantity WHERE total_quantity > 3;
+
+PRODUCT_ID TOTAL_QUANTITY
+---------- --------------
+       102              5
+       103              4
+       104              4
+
+SQL> CREATE VIEW high_demand_products AS SELECT product_id, total_quantity FROM product_total_quantity WHERE total_quantity > 3;
+
+View created.
+
+SQL> SELECT * FROM high_demand_products;
+
+PRODUCT_ID TOTAL_QUANTITY
+---------- --------------
+       102              5
+       103              4
+       104              4
+
+//error
+
+SQL> CREATE VIEW branch_city_view AS SELECT branch_name, city FROM warehouse_branch;
+CREATE VIEW branch_city_view AS SELECT branch_name, city FROM warehouse_branch
+            *
+ERROR at line 1:
+ORA-00955: name is already used by an existing object
+
+
+//drop view
+
+SQL> select * from high_demand_products;
+
+PRODUCT_ID TOTAL_QUANTITY
+---------- --------------
+       102              5
+       103              4
+       104              4
+
+SQL> DROP VIEW high_demand_products;
+
+View dropped.
+
+SQL> select * from high_demand_products;
+select * from high_demand_products
+              *
+ERROR at line 1:
+ORA-00942: table or view does not exist
+
+
+//insert
+
+SQL> SELECT sale_id, sale_status FROM sales WHERE sale_status = 'Pending';
+
+   SALE_ID SALE_STATUS
+---------- --------------------
+       211 Pending
+       214 Pending
+
+SQL> CREATE VIEW pending_sales_view AS SELECT sale_id, sale_status FROM sales WHERE sale_status = 'Pending';
+
+View created.
+
+SQL> INSERT INTO pending_sales_view VALUES (400, 'Pending');
+
+1 row created.
+
+SQL> INSERT INTO pending_sales_view VALUES (401, 'Pending');
+
+1 row created.
+
+SQL> INSERT INTO pending_sales_view VALUES (402, 'Pending');
+
+1 row created.
+
+SQL> select sale_id,sale_status from sales where sale_status='Pending';
+
+   SALE_ID SALE_STATUS
+---------- --------------------
+       400 Pending
+       401 Pending
+       402 Pending
+       211 Pending
+       214 Pending
+
+//update
+
+
+SQL> SELECT branch_name, city FROM warehouse_branch WHERE branch_name = 'MADURAI EAST';
+
+BRANCH_NAME     CITY
+--------------- ---------------
+MADURAI EAST    MADURAI
+
+SQL> UPDATE branch_city_view SET city = 'MADURAI SOUTH' WHERE branch_name = 'MADURAI EAST';
+
+1 row updated.
+
+SQL> SELECT branch_name, city FROM warehouse_branch WHERE branch_name = 'MADURAI EAST';
+
+BRANCH_NAME     CITY
+--------------- ---------------
+MADURAI EAST    MADURAI SOUTH
+
+//delete
+
+SQL> SELECT sale_id FROM sales WHERE sale_status = 'Pending' AND sale_id NOT IN (SELECT sale_id FROM order_items);
+
+   SALE_ID
+----------
+       400
+       401
+       402
+
+SQL> DELETE FROM pending_sales_view WHERE sale_id = 400;
+
+1 row deleted.
+
+SQL> select * from sales ;
+
+   SALE_ID SALE_DATE SALE_STATUS          CUSTOMER_ID
+---------- --------- -------------------- -----------
+       202 11-FEB-26 Completed                      2
+       203 12-FEB-26 Completed                      3
+       204 13-FEB-26 Cancelled                      4
+       401           Pending
+       402           Pending
+       211 21-FEB-26 Pending                        1
+       212 22-FEB-26 Completed                      2
+       213 23-FEB-26 Completed                      3
+       214 24-FEB-26 Pending                        4
+       215 25-FEB-26 Cancelled                      2
+       216 05-MAR-26 Completed                      3
+
+11 rows selected.
+
+//index
+
+//normal index
+
+SQL> CREATE INDEX idx_branch_city ON warehouse_branch(city);
+
+Index created.
+
+//index already exists error
+
+SQL> CREATE INDEX idx_branch_city ON warehouse_branch(city);
+CREATE INDEX idx_branch_city ON warehouse_branch(city)
+             *
+ERROR at line 1:
+ORA-00955: name is already used by an existing object
+
+//unique index
+
+SQL> CREATE UNIQUE INDEX idx_product_name ON product(product_name);
+
+Index created.
+
+//bitmap index
+
+SQL> CREATE BITMAP INDEX idx_sale_status ON sales(sale_status);
+
+Index created.
+
+//composite index
+
+SQL> CREATE INDEX idx_order_product_quantity ON order_items(product_id, quantity);
+
+Index created.
+
+//function based index
+
+SQL> CREATE INDEX idx_lower_product ON product(LOWER(product_name));
+
+Index created.
+
+//time
+
+SQL> SET TIMING ON;
+SQL>  SELECT * FROM warehouse_branch WHERE city = 'MADURAI';
+
+ BRANCH_ID BRANCH_NAME     CITY              CAPACITY STATUS
+---------- --------------- --------------- ---------- --------------------
+         2 MADURAI CENTRAL MADURAI               7000 ACTIVE
+
+Elapsed: 00:00:00.02
+
+Elapsed: 00:00:00.02
+SQL> CREATE INDEX idx_branch_city ON warehouse_branch(city);
+
+Index created.
+
+Elapsed: 00:00:00.03
+
+
+SQL>  SELECT * FROM warehouse_branch WHERE city = 'MADURAI';
+
+ BRANCH_ID BRANCH_NAME     CITY              CAPACITY STATUS
+---------- --------------- --------------- ---------- --------------------
+         2 MADURAI CENTRAL MADURAI               7000 ACTIVE
+
+Elapsed: 00:00:00.00
