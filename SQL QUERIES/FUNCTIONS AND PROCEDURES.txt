@@ -1,0 +1,877 @@
+
+//no parameter
+
+SQL> CREATE OR REPLACE FUNCTION get_total_products
+  2  RETURN NUMBER
+  3  IS
+  4     v_total NUMBER;
+  5  BEGIN
+  6     SELECT COUNT(*) INTO v_total
+  7     FROM product;
+  8     RETURN v_total;
+  9  END;
+ 10  /
+
+Function created.
+
+SQL> BEGIN
+  2  DBMS_OUTPUT.PUT_LINE('total no of products:' || get_total_products);
+  3  END;
+  4  /
+total no of products:27
+
+PL/SQL procedure successfully completed.
+
+
+//single parameter
+SQL> CREATE OR REPLACE FUNCTION get_product_price
+  2  (
+  3  p_product_id IN NUMBER
+  4  )
+  5  RETURN NUMBER
+  6  IS
+  7     v_price NUMBER;
+  8  BEGIN
+  9     SELECT price INTO v_price
+ 10     FROM product
+ 11     WHERE product_id = p_product_id;
+ 12     RETURN v_price;
+ 13  EXCEPTION
+ 14     WHEN NO_DATA_FOUND THEN
+ 15        RETURN 0;
+ 16  END;
+ 17  /
+
+Function created.
+
+SQL> BEGIN
+  2  DBMS_OUTPUT.PUT_LINE('get the product price for 301:' || get_product_price(105));
+  3  END;
+  4  /
+get the product price for 301:9100
+
+PL/SQL procedure successfully completed.
+
+//multiple parameters
+
+
+SQL> CREATE OR REPLACE FUNCTION get_orders_by_quantity
+  2  (
+  3  p_product_id IN NUMBER,
+  4  p_quantity IN NUMBER
+  5  )
+  6  RETURN NUMBER
+  7  IS
+  8     v_count NUMBER;
+  9  BEGIN
+ 10     SELECT COUNT(*)
+ 11     INTO v_count
+ 12     FROM order_items
+ 13     WHERE product_id = p_product_id
+ 14     AND quantity > p_quantity;
+ 15
+ 16     RETURN v_count;
+ 17  END;
+ 18  /
+
+Function created.
+
+
+SQL> SELECT get_orders_by_quantity(102,5) FROM dual;
+
+GET_ORDERS_BY_QUANTITY(102,5)
+-----------------------------
+                            2
+
+
+//function returning record(rowtype)
+
+SQL> CREATE OR REPLACE FUNCTION get_product_record ( p_product_id IN NUMBER ) RETURN product%ROWTYPE
+  2  IS
+  3     v_product product%ROWTYPE;
+  4  BEGIN
+  5     SELECT *
+  6     INTO v_product
+  7     FROM product
+  8     WHERE product_id = p_product_id;
+  9     RETURN v_product;
+ 10  END;
+ 11  /
+
+Function created.
+
+SQL> DECLARE
+  2  v_rec product%ROWTYPE;
+  3  BEGIN
+  4  v_rec := get_product_record(318);
+  5  DBMS_OUTPUT.PUT_LINE(v_rec.product_name);
+  6  DBMS_OUTPUT.PUT_LINE(v_rec.price);
+  7  END;
+  8  /
+Graphics Tablet
+13125
+
+PL/SQL procedure successfully completed.
+
+//function returning cursor
+
+
+SQL> CREATE OR REPLACE FUNCTION get_product_ref_cursor
+  2  RETURN SYS_REFCURSOR
+  3  IS
+  4     v_cursor SYS_REFCURSOR;
+  5  BEGIN
+  6     OPEN v_cursor FOR
+  7     SELECT product_id, product_name, price FROM product;
+  8     RETURN v_cursor;
+  9  END;
+ 10  /
+
+Function created.
+
+SQL> DECLARE
+  2    v_cursor SYS_REFCURSOR;
+  3    v_id product.product_id%TYPE;
+  4    v_name product.product_name%TYPE;
+  5    v_price product.price%TYPE;
+  6
+  7  BEGIN
+  8    v_cursor := get_product_ref_cursor;
+  9
+ 10    LOOP
+ 11      FETCH v_cursor INTO v_id, v_name, v_price;
+ 12      EXIT WHEN v_cursor%NOTFOUND;
+ 13
+ 14      DBMS_OUTPUT.PUT_LINE(v_id || ' ' || v_name || ' ' || v_price);
+ 15    END LOOP;
+ 16
+ 17    CLOSE v_cursor;
+ 18  END;
+ 19  /
+301 Smart Watch 10180
+303 Gaming Mouse 1995
+304 Laser Printer 17000
+305 Document Scanner 9500
+306 WiFi Router 4410
+307 Network Switch 9240
+308 Office Desk 14000
+309 Ergonomic Chair 7500
+313 LED Monitor 14175
+314 Tablet Pro 23100
+315 Thermal Printer 11000
+316 Server Rack 28000
+318 Graphics Tablet 13125
+319 IP Camera 7140
+104 Printer 15000
+102 Mouse 525
+103 Keyboard 1910
+105 Scanner 9100
+999 Test Product 1500
+1001 Pen 100
+1002 Mouse 1500
+1003 gaming Laptop 50000
+111 Tablet 18900
+112 Projector 25000
+113 Webcam 3675
+500 wired headset 420
+2000 Laptop 50000
+
+PL/SQL procedure successfully completed.
+
+//function using case
+
+SQL> CREATE OR REPLACE FUNCTION get_price_category
+  2  ( p_product_id IN NUMBER ) RETURN VARCHAR2
+  3  IS
+  4  v_price NUMBER;
+  5  BEGIN
+  6  SELECT price INTO v_price
+  7  FROM product
+  8  WHERE product_id = p_product_id;
+  9  RETURN CASE
+ 10  WHEN v_price < 500 THEN 'LOW'
+ 11  WHEN v_price BETWEEN 500 AND 2000 THEN 'MEDIUM'
+ 12  ELSE 'HIGH'
+ 13  END;
+ 14  END;
+ 15  /
+
+Function created.
+
+SQL> BEGIN
+  2  DBMS_OUTPUT.PUT_LINE('product category is :' || get_price_category(500));
+  3  END;
+  4  /
+product category is :LOW
+
+PL/SQL procedure successfully completed.
+
+SQL> BEGIN
+  2  DBMS_OUTPUT.PUT_LINE('product category is :' || get_price_category(1002));
+  3  END;
+  4  /
+product category is :MEDIUM
+
+PL/SQL procedure successfully completed.
+
+SQL> BEGIN
+  2  DBMS_OUTPUT.PUT_LINE('product category is :' || get_price_category(1003));
+  3  END;
+  4  /
+product category is :HIGH
+
+PL/SQL procedure successfully completed.
+
+//function checking existing records
+
+SQL> CREATE OR REPLACE FUNCTION product_exists
+  2  ( p_product_id IN NUMBER ) RETURN VARCHAR2
+  3  IS
+  4  v_count NUMBER;
+  5  BEGIN
+  6  SELECT COUNT(*) INTO v_count
+  7  FROM product
+  8  WHERE product_id = p_product_id;
+  9  IF v_count > 0 THEN
+ 10  RETURN 'Product Exists';
+ 11  ELSE
+ 12  RETURN 'Product Not Found';
+ 13  END IF;
+ 14  END;
+ 15  /
+
+Function created.
+
+SQL> BEGIN
+  2      DBMS_OUTPUT.PUT_LINE(product_exists(113));
+  3  END;
+  4  /
+Product Exists
+
+PL/SQL procedure successfully completed.
+
+SQL> BEGIN
+  2      DBMS_OUTPUT.PUT_LINE(product_exists(998));
+  3  END;
+  4  /
+Product Not Found
+
+PL/SQL procedure successfully completed.
+
+
+//procedure without parameter
+
+SQL> CREATE OR REPLACE PROCEDURE simple_branch_insert
+  2  IS
+  3  BEGIN
+  4  INSERT INTO warehouse_branch
+  5  (branch_id,branch_name,city,capacity,status)
+  6  VALUES
+  7  (501,'Virudhunagar branch','VNR',5000,'ACTIVE');
+  8  COMMIT;
+  9  END;
+ 10  /
+
+Procedure created.
+
+SQL> EXEC simple_branch_insert;
+
+PL/SQL procedure successfully completed.
+
+SQL> select * from warehouse_branch where branch_id=501;
+
+ BRANCH_ID BRANCH_NAME     CITY              CAPACITY STATUS
+---------- --------------- --------------- ---------- --------------------
+       501 Virudhunagar br VNR                   5000 ACTIVE
+           anch
+
+//procedure with in parameter
+
+SQL> CREATE OR REPLACE PROCEDURE proc_insert_product
+  2  ( p_product_id IN NUMBER , p_price IN NUMBER )
+  3  IS
+  4  BEGIN
+  5  INSERT INTO product(product_id,product_name,price)
+  6  VALUES(p_product_id,'Ethernet cable',p_price);
+  7  COMMIT;
+  8  END;
+  9  /
+
+Procedure created.
+
+SQL> EXEC proc_insert_product(601,200);
+
+PL/SQL procedure successfully completed.
+
+SQL> select * from product where product_id=601;
+
+PRODUCT_ID PRODUCT_NAME         PRICE CATEGORY_ID SUPPLIER_ID
+---------- --------------- ---------- ----------- -----------
+PRICE_CATEGORY
+--------------------
+       601 Ethernet cable         200
+
+
+//procedure with out parameter
+
+
+SQL>    CREATE OR REPLACE PROCEDURE proc_get_product_price
+  2  ( p_product_id IN NUMBER, p_price OUT NUMBER )
+  3  IS
+  4  BEGIN
+  5  SELECT price INTO p_price
+  6  FROM product
+  7  WHERE product_id = p_product_id;
+  8  END;
+  9  /
+
+Procedure created.
+
+SQL> DECLARE
+  2  v_price NUMBER;
+  3  BEGIN
+  4  proc_get_product_price(601,v_price);
+  5  DBMS_OUTPUT.PUT_LINE('product price for id 601 :' || v_price);
+  6  END;
+  7  /
+product price for id 601 :200
+
+PL/SQL procedure successfully completed.
+
+// Procedure With IN OUT Parameter
+
+SQL> DECLARE
+  2      v_price NUMBER := 120;
+  3  BEGIN
+  4      proc_update_price(601, v_price);
+  5      DBMS_OUTPUT.PUT_LINE('Updated Price: ' || v_price);
+  6  END;
+  7  /
+Product 601 updated. New price: 320
+Updated Price: 320
+
+PL/SQL procedure successfully completed.
+
+SQL> select * from product where product_id = 601;
+
+PRODUCT_ID PRODUCT_NAME         PRICE CATEGORY_ID SUPPLIER_ID
+---------- --------------- ---------- ----------- -----------
+PRICE_CATEGORY
+--------------------
+       601 Ethernet cable         320
+
+//procedure returning cursor and out
+
+SQL> CREATE OR REPLACE PROCEDURE proc_house_cursor
+  2  ( p_cursor OUT SYS_REFCURSOR )
+  3  IS
+  4  BEGIN
+  5  OPEN p_cursor FOR
+  6  SELECT * FROM warehouse_branch;
+  7  END;
+  8  /
+
+Procedure created.
+
+SQL> DECLARE
+  2      v_cursor SYS_REFCURSOR;
+  3      v_rec    warehouse_branch%ROWTYPE;
+  4  BEGIN
+  5      proc_house_cursor(v_cursor);
+  6      LOOP
+  7          FETCH v_cursor INTO v_rec;
+  8          EXIT WHEN v_cursor%NOTFOUND;
+  9          DBMS_OUTPUT.PUT_LINE(v_rec.branch_name || ' - ' || v_rec.capacity);
+ 10      END LOOP;
+ 11      CLOSE v_cursor;
+ 12  END;
+ 13  /
+MADURAI EAST - 7000
+CHENNAI SOUTH - 5000
+SIVAKASI MAIN - 5000
+MADURAI CENTRAL - 7000
+VIRUDUNAGAR EAST - 4500
+CHENNAI NORTH - 8000
+COIMBATORE HUB - 7000
+TRICHY DEPOT - 4000
+sivakasi central -
+TENKASI WEST - 7000
+ERODE CENTRAL - 5000
+KARUR HUB - 6500
+NAMAKKAL DEPOT - 5200
+Virudhunagar branch - 5000
+Central Warehouse - 5000
+
+PL/SQL procedure successfully completed.
+
+//procedure with exception handling
+
+SQL> CREATE OR REPLACE PROCEDURE proc_insert_sale
+  2  ( p_sale_id IN NUMBER, p_customer_id IN NUMBER )
+  3  IS
+  4  BEGIN
+  5  INSERT INTO sales
+  6  VALUES(p_sale_id,SYSDATE,'Completed',p_customer_id);
+  7  COMMIT;
+  8  EXCEPTION
+  9  WHEN DUP_VAL_ON_INDEX THEN
+ 10  DBMS_OUTPUT.PUT_LINE('Duplicate Sale ID');
+ 11  WHEN OTHERS THEN
+ 12  DBMS_OUTPUT.PUT_LINE(SQLERRM);
+ 13  END;
+ 14  /
+
+Procedure created.
+
+SQL> BEGIN
+  2      proc_insert_sale(204, 4);
+  3  END;
+  4  /
+Duplicate Sale ID
+
+PL/SQL procedure successfully completed.
+
+//procedure using if
+
+SQL> CREATE OR REPLACE PROCEDURE increase_product_price
+  2  ( p_product_id IN NUMBER )
+  3  IS
+  4  v_price NUMBER;
+  5  BEGIN
+  6  SELECT price INTO v_price
+  7  FROM product
+  8  WHERE product_id = p_product_id;
+  9  IF v_price < 1000 THEN
+ 10  UPDATE product
+ 11  SET price = price + 100
+ 12  WHERE product_id = p_product_id;
+ 13  DBMS_OUTPUT.PUT_LINE('Price Increased');
+ 14  END IF;
+ 15  END;
+ 16  /
+
+Procedure created.
+
+SQL> BEGIN
+  2      increase_product_price(601);
+  3  END;
+  4  /
+Product 601 updated. New price: 420
+Price Increased
+
+PL/SQL procedure successfully completed.
+
+//procedure using cursor
+
+SQL> CREATE OR REPLACE PROCEDURE show_products
+  2  IS
+  3  CURSOR c_prod IS
+  4  SELECT product_name,price FROM product;
+  5  v_name product.product_name%TYPE;
+  6  v_price product.price%TYPE;
+  7  BEGIN
+  8  OPEN c_prod;
+  9  LOOP
+ 10  FETCH c_prod INTO v_name,v_price;
+ 11  EXIT WHEN c_prod%NOTFOUND;
+ 12  DBMS_OUTPUT.PUT_LINE(v_name||' '||v_price);
+ 13  END LOOP;
+ 14  CLOSE c_prod;
+ 15  END;
+ 16  /
+
+Procedure created.
+
+SQL>
+SQL> BEGIN
+  2      show_products;
+  3  END;
+  4  /
+Smart Watch 10180
+Gaming Mouse 1995
+Laser Printer 17000
+Document Scanner 9500
+WiFi Router 4410
+Network Switch 9240
+Office Desk 14000
+Ergonomic Chair 7500
+LED Monitor 14175
+Tablet Pro 23100
+Thermal Printer 11000
+Server Rack 28000
+Graphics Tablet 13125
+IP Camera 7140
+Printer 15000
+Mouse 525
+Keyboard 1910
+Scanner 9100
+Test Product 1500
+Pen 100
+Mouse 1500
+gaming Laptop 50000
+Tablet 18900
+Projector 25000
+Webcam 3675
+wired headset 420
+Ethernet cable 420
+Laptop 50000
+
+PL/SQL procedure successfully completed.
+
+//procedure using for loop
+
+SQL> CREATE OR REPLACE PROCEDURE first_five_products
+  2  IS
+  3  v_count NUMBER := 1;
+  4  BEGIN
+  5  FOR rec IN (SELECT product_name FROM product)
+  6  LOOP
+  7  EXIT WHEN v_count > 5;
+  8  DBMS_OUTPUT.PUT_LINE(rec.product_name);
+  9  v_count := v_count + 1;
+ 10  END LOOP;
+ 11  END;
+ 12  /
+
+Procedure created.
+
+SQL> BEGIN
+  2      first_five_products;
+  3  END;
+  4  /
+Smart Watch
+Gaming Mouse
+Laser Printer
+Document Scanner
+WiFi Router
+
+PL/SQL procedure successfully completed.
+
+//procedure using while loop
+
+SQL> CREATE OR REPLACE PROCEDURE print_loop
+  2  IS
+  3  v_count NUMBER := 1;
+  4  BEGIN
+  5  WHILE v_count <= 5
+  6  LOOP
+  7  DBMS_OUTPUT.PUT_LINE(v_count);
+  8  v_count := v_count + 1;
+  9  END LOOP;
+ 10  END;
+ 11  /
+
+Procedure created.
+
+SQL> BEGIN
+  2      print_loop;
+  3  END;
+  4  /
+1
+2
+3
+4
+5
+
+PL/SQL procedure successfully completed.
+
+//procedure with join
+
+SQL> CREATE OR REPLACE PROCEDURE product_order_details
+  2  IS
+  3  BEGIN
+  4  FOR rec IN
+  5  (
+  6  SELECT p.product_name,o.quantity
+  7  FROM product p
+  8  JOIN order_items o
+  9  ON p.product_id = o.product_id
+ 10  )
+ 11  LOOP
+ 12  DBMS_OUTPUT.PUT_LINE(rec.product_name||' '||rec.quantity);
+ 13  END LOOP;
+ 14  END;
+ 15  /
+
+Procedure created.
+
+SQL> BEGIN
+  2      product_order_details;
+  3  END;
+  4  /
+Printer 2
+Printer 2
+Mouse 10
+Mouse 10
+Keyboard 2
+Keyboard 4
+Keyboard 5
+Scanner 3
+Tablet 3
+Projector 1
+Webcam 2
+
+PL/SQL procedure successfully completed.
+
+//procedure with select exception
+
+SQL> CREATE OR REPLACE PROCEDURE get_product_details
+  2  ( p_product_id IN NUMBER )
+  3  IS
+  4  v_name product.product_name%TYPE;
+  5  BEGIN
+  6  SELECT product_name INTO v_name
+  7  FROM product
+  8  WHERE product_id = p_product_id;
+  9  DBMS_OUTPUT.PUT_LINE(v_name);
+ 10  EXCEPTION
+ 11  WHEN NO_DATA_FOUND THEN
+ 12  DBMS_OUTPUT.PUT_LINE('Product not found');
+ 13  END;
+ 14  /
+
+Procedure created.
+
+PL/SQL procedure successfully completed.
+
+SQL> BEGIN
+  2      get_product_details(601);
+  3      get_product_details(9999);
+  4  END;
+  5  /
+Ethernet cable
+Product not found
+
+PL/SQL procedure successfully completed.
+
+
+//hackerrank
+
+self 1
+
+A)write a procedure to display all the product details
+
+SQL> CREATE OR REPLACE PROCEDURE display_all_products IS
+  2  BEGIN
+  3      FOR rec IN (SELECT product_id, product_name, category_id, price FROM product)
+  4      LOOP
+  5          DBMS_OUTPUT.PUT_LINE('ID: '||rec.product_id||' | Name: '||rec.product_name||
+  6                               ' | Cat: '||rec.category_id||' | Price: '||rec.price);
+  7      END LOOP;
+  8  END;
+  9  /
+
+Procedure created.
+
+SQL> EXEC display_all_products;
+ID: 301 | Name: Smart Watch | Cat: 1 | Price: 10180
+ID: 303 | Name: Gaming Mouse | Cat: 3 | Price: 1995
+ID: 304 | Name: Laser Printer | Cat: 2 | Price: 17000
+ID: 305 | Name: Document Scanner | Cat: 2 | Price: 9500
+ID: 306 | Name: WiFi Router | Cat: 3 | Price: 4410
+ID: 307 | Name: Network Switch | Cat: 3 | Price: 9240
+ID: 308 | Name: Office Desk | Cat: 4 | Price: 14000
+ID: 309 | Name: Ergonomic Chair | Cat: 4 | Price: 7500
+ID: 313 | Name: LED Monitor | Cat: 1 | Price: 14175
+ID: 314 | Name: Tablet Pro | Cat: 1 | Price: 23100
+ID: 315 | Name: Thermal Printer | Cat: 2 | Price: 11000
+ID: 316 | Name: Server Rack | Cat: 4 | Price: 28000
+ID: 318 | Name: Graphics Tablet | Cat: 1 | Price: 13125
+ID: 319 | Name: IP Camera | Cat: 3 | Price: 7140
+ID: 104 | Name: Printer | Cat: 2 | Price: 15000
+ID: 102 | Name: Mouse | Cat: 3 | Price: 525
+ID: 103 | Name: Keyboard | Cat: 3 | Price: 1910
+ID: 105 | Name: Scanner | Cat: 2 | Price: 9100
+ID: 999 | Name: Test Product | Cat:  | Price: 1500
+ID: 1001 | Name: Pen | Cat:  | Price: 100
+ID: 1002 | Name: Mouse | Cat:  | Price: 1500
+ID: 1003 | Name: gaming Laptop | Cat:  | Price: 50000
+ID: 111 | Name: Tablet | Cat: 1 | Price: 18900
+ID: 112 | Name: Projector | Cat: 2 | Price: 25000
+ID: 113 | Name: Webcam | Cat: 3 | Price: 3675
+ID: 500 | Name: wired headset | Cat: 1 | Price: 420
+ID: 601 | Name: Ethernet cable | Cat:  | Price: 420
+ID: 2000 | Name: Laptop | Cat: 2 | Price: 50000
+
+PL/SQL procedure successfully completed.
+
+B)Function to display all Product Categories with a heading
+
+SQL> CREATE OR REPLACE FUNCTION get_category_heading RETURN VARCHAR2 IS
+  2      v_out VARCHAR2(4000) := 'PRODUCT CATEGORIES' || CHR(10) || '------------------' || CHR(10);
+  3  BEGIN
+  4      FOR rec IN (SELECT DISTINCT category_id FROM product) LOOP
+  5          v_out := v_out || 'Category ID: ' || rec.category_id || CHR(10);
+  6      END LOOP;
+  7      RETURN v_out;
+  8  END;
+  9  /
+
+Function created.
+
+SQL> SELECT get_category_heading FROM dual;
+
+GET_CATEGORY_HEADING
+--------------------------------------------------------------------------------
+PRODUCT CATEGORIES
+------------------
+Category ID: 1
+Category ID: 3
+Category ID: 2
+Category ID: 4
+
+self 2
+
+A)Procedure for Highest Price Product in each Category (Nested WHILE loop)
+
+SQL> CREATE OR REPLACE PROCEDURE highest_price_per_category IS
+  2      CURSOR c_cats IS SELECT DISTINCT category_id FROM product;
+  3      v_cat_id NUMBER;
+  4  BEGIN
+  5      OPEN c_cats;
+  6      FETCH c_cats INTO v_cat_id;
+  7      WHILE c_cats%FOUND LOOP
+  8          -- Nested loop to find products matching the max price for this category
+  9          FOR rec IN (SELECT product_name, price FROM product
+ 10                      WHERE category_id = v_cat_id
+ 11                      AND price = (SELECT MAX(price) FROM product WHERE category_id = v_cat_id))
+ 12          LOOP
+ 13              DBMS_OUTPUT.PUT_LINE('Cat '||v_cat_id||': '||rec.product_name||' ('||rec.price||')');
+ 14          END LOOP;
+ 15
+ 16          FETCH c_cats INTO v_cat_id;
+ 17      END LOOP;
+ 18      CLOSE c_cats;
+ 19  END;
+ 20  /
+
+Procedure created.
+
+SQL>
+SQL> EXEC highest_price_per_category;
+Cat 1: Tablet Pro (23100)
+Cat 3: Network Switch (9240)
+Cat 2: Laptop (50000)
+Cat 4: Server Rack (28000)
+
+PL/SQL procedure successfully completed.
+
+B)Function for Average Price per Category
+
+SQL> CREATE OR REPLACE FUNCTION get_avg_price_cat RETURN VARCHAR2 IS
+  2      v_res VARCHAR2(4000) := '';
+  3  BEGIN
+  4      FOR rec IN (SELECT category_id, AVG(price) as avg_p FROM product GROUP BY category_id)
+  5      LOOP
+  6          v_res := v_res || 'Category: '||rec.category_id||' | Avg: '||ROUND(rec.avg_p,2)||CHR(10);
+  7      END LOOP;
+  8      RETURN v_res;
+  9  END;
+ 10  /
+
+Function created.
+
+SQL> SELECT get_avg_price_cat FROM dual;
+
+GET_AVG_PRICE_CAT
+--------------------------------------------------------------------------------
+Category: 1 | Avg: 13316.67
+Category: 3 | Avg: 4127.86
+Category: 2 | Avg: 19514.29
+Category: 4 | Avg: 16500
+Category:  | Avg: 10704
+
+self 3
+
+A) Procedure to return Branch Name with maximum stock movements
+
+SQL> CREATE OR REPLACE PROCEDURE branch_max_movements IS
+  2      v_name warehouse_branch.branch_name%TYPE;
+  3  BEGIN
+  4      SELECT branch_name INTO v_name
+  5      FROM (
+  6          SELECT b.branch_name
+  7          FROM stock_movement s JOIN warehouse_branch b ON s.branch_id = b.branch_id
+  8          GROUP BY b.branch_name
+  9          ORDER BY COUNT(*) DESC
+ 10      ) WHERE ROWNUM = 1;
+ 11      DBMS_OUTPUT.PUT_LINE('Branch with most activity: ' || v_name);
+ 12  END;
+ 13  /
+
+Procedure created.
+
+SQL>
+SQL> EXEC branch_max_movements;
+Branch with most activity: MADURAI CENTRAL
+
+PL/SQL procedure successfully completed.
+
+
+B)Write a PL/SQL function to return the employee details whose salary is less than average salary of where ‘arun’ is working
+
+3 B)B)	Write a PL/SQL function to return the employee details whose salary is less than average salary of where ‘arun’ is working
+
+
+SQL> CREATE OR REPLACE FUNCTION emp_below_avg_arun
+  2  RETURN SYS_REFCURSOR
+  3  IS
+  4    v_cursor SYS_REFCURSOR;
+  5  BEGIN
+  6    OPEN v_cursor FOR
+  7      SELECT employee_name, salary, employee_city
+  8      FROM employee
+  9      WHERE salary < (
+ 10        SELECT AVG(salary)
+ 11        FROM employee
+ 12        WHERE employee_city = (
+ 13          SELECT employee_city
+ 14          FROM employee
+ 15          WHERE LOWER(employee_name) = 'arun'
+ 16            AND ROWNUM = 1
+ 17        )
+ 18      );
+ 19    RETURN v_cursor;
+ 20  END;
+ 21  /
+
+Function created.
+
+SQL> DECLARE
+  2    v_res SYS_REFCURSOR;
+  3    v_name employee.employee_name%TYPE;
+  4    v_salary employee.salary%TYPE;
+  5    v_city employee.employee_city%TYPE;
+  6  BEGIN
+  7    v_res := emp_below_avg_arun;
+  8    LOOP
+  9      FETCH v_res INTO v_name, v_salary, v_city;
+ 10      EXIT WHEN v_res%NOTFOUND;
+ 11      DBMS_OUTPUT.PUT_LINE(
+ 12        'NAME: ' || v_name ||
+ 13        ' | SALARY: ' || v_salary ||
+ 14        ' | CITY: ' || v_city
+ 15      );
+ 16    END LOOP;
+ 17    CLOSE v_res;
+ 18  END;
+ 19  /
+
+NAME: SATHISH | SALARY: 22000 | CITY: SALEM
+NAME: RAVI | SALARY: 25000 | CITY: TRICHY
+NAME: MANI | SALARY: 28000 | CITY: COIMBATORE
+NAME: KUMAR | SALARY: 35000 | CITY: MADURAI
+NAME: ARUN | SALARY: 45000 | CITY: SIVAKASI
+NAME: ARUN | SALARY: 45000 | CITY: SIVAKASI
+NAME: DINESH | SALARY: 45000 | CITY: SIVAKASI
+NAME: ARUN | SALARY: 46000 | CITY: SIVAKASI
+NAME: MAHESH | SALARY: 46000 | CITY: SIVAKASI
+NAME: KARTHIK | SALARY: 48000 | CITY: SIVAKASI
+
+PL/SQL procedure successfully completed.
+
+
+
+
+
+
